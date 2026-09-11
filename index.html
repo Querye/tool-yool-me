@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>tool.yool.me · 공무원 업무 도구</title>
+<meta name="description" content="설치 없이 브라우저에서 바로 쓰는 공무원 업무 도구 모음. 파일은 서버로 전송되지 않습니다.">
+<style>
+  :root{
+    --ink:#12130f;
+    --paper:#e8e4d8;
+    --line:#12130f;
+    --amber:#c8410b;
+    --amber-soft:#e8620f;
+    --dim:#5c5a4e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Consolas","DejaVu Sans Mono",monospace;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .frame{
+    width:100%;
+    max-width:560px;
+    border:2px solid var(--line);
+    background:var(--paper);
+    box-shadow:6px 6px 0 var(--line);
+  }
+  header{
+    border-bottom:2px solid var(--line);
+    padding:16px 18px;
+  }
+  header h1{
+    font-size:20px;
+    font-weight:700;
+    letter-spacing:-.01em;
+  }
+  header .sub{
+    font-size:11px;
+    color:var(--dim);
+    margin-top:6px;
+    line-height:1.6;
+  }
+  .body{padding:18px}
+  .tool{
+    display:block;
+    border:2px solid var(--line);
+    background:#f0ece0;
+    padding:16px;
+    margin-bottom:14px;
+    text-decoration:none;
+    color:var(--ink);
+    box-shadow:3px 3px 0 var(--line);
+    transition:transform .06s, box-shadow .06s, background .12s;
+  }
+  .tool:hover{background:#fff}
+  .tool:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--line)}
+  .tool .name{font-size:15px;font-weight:700;margin-bottom:5px}
+  .tool .desc{font-size:11px;color:var(--dim);line-height:1.6}
+  .tool.soon{opacity:.55;cursor:default;box-shadow:3px 3px 0 #9a9689}
+  .tool.soon:hover{background:#f0ece0}
+  .tool.soon:active{transform:none;box-shadow:3px 3px 0 #9a9689}
+  .badge{
+    display:inline-block;
+    font-size:9px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--amber);
+    border:1px solid var(--amber);
+    padding:1px 6px;
+    margin-left:6px;
+    vertical-align:middle;
+  }
+  .badge.gray{color:var(--dim);border-color:var(--dim)}
+  .note{
+    margin-top:6px;
+    font-size:10px;
+    color:var(--dim);
+    line-height:1.7;
+    border-top:1px solid #c3bfb2;
+    padding-top:12px;
+  }
+  .note b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="frame">
+  <header>
+    <h1>tool.yool.me</h1>
+    <div class="sub">설치 없이 브라우저에서 바로 쓰는 업무 도구.<br>파일은 서버로 전송되지 않습니다.</div>
+  </header>
+  <div class="body">
+
+    <a class="tool" href="/xlsx-unlock/">
+      <div class="name">엑셀 암호 해제 <span class="badge">running</span></div>
+      <div class="desc">열기 암호가 걸린 엑셀 파일에서 암호를 제거합니다. 암호를 아는 본인 파일 전용.</div>
+    </a>
+
+    <div class="tool soon">
+      <div class="name">그린우편 검사기 <span class="badge gray">준비 중</span></div>
+      <div class="desc">우체국 e-그린우편 업로드 파일의 글자수·금지 문자를 발송 전에 점검합니다.</div>
+    </div>
+
+    <div class="note">
+      모든 처리는 <b>브라우저 안에서만</b> 이루어집니다. 업로드도, 전송도 없습니다.<br>
+      망분리 환경에서도 사용할 수 있습니다.
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

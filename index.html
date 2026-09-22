@@ -49,12 +49,17 @@
     line-height:1.6;
   }
   .body{padding:18px}
+  .tools{
+    display:grid;
+    grid-template-columns:1fr 1fr;   /* 2x2 */
+    gap:13px;
+  }
   .tool{
-    display:block;
+    display:flex;
+    flex-direction:column;
     border:2px solid var(--line);
     background:#f0ece0;
-    padding:16px;
-    margin-bottom:14px;
+    padding:13px;
     text-decoration:none;
     color:var(--ink);
     box-shadow:3px 3px 0 var(--line);
@@ -62,23 +67,28 @@
   }
   .tool:hover{background:#fff}
   .tool:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--line)}
-  .tool .name{font-size:15px;font-weight:700;margin-bottom:5px}
-  .tool .desc{font-size:11px;color:var(--dim);line-height:1.6}
+  .tool .name{font-size:14px;font-weight:700;line-height:1.35;margin:7px 0 5px;word-break:keep-all}
+  .tool .desc{font-size:11px;color:var(--dim);line-height:1.65;word-break:keep-all;overflow-wrap:anywhere}
+  .tool .desc .kw{white-space:nowrap}
   .tool.soon{opacity:.55;cursor:default;box-shadow:3px 3px 0 #9a9689}
   .tool.soon:hover{background:#f0ece0}
   .tool.soon:active{transform:none;box-shadow:3px 3px 0 #9a9689}
   .badge{
-    display:inline-block;
+    align-self:flex-start;
     font-size:9px;
     letter-spacing:.14em;
     text-transform:uppercase;
     color:var(--amber);
     border:1px solid var(--amber);
     padding:1px 6px;
-    margin-left:6px;
-    vertical-align:middle;
   }
   .badge.gray{color:var(--dim);border-color:var(--dim)}
+  @media (max-width:360px){
+    .body{padding:14px}
+    .tools{gap:10px}
+    .tool{padding:11px}
+    .tool .name{font-size:13px}
+  }
   .note{
     margin-top:6px;
     font-size:10px;
@@ -94,33 +104,41 @@
 <div class="frame">
   <header>
     <h1>tool.yool.me</h1>
-    <div class="sub">설치 없이 브라우저에서 바로 쓰는 업무 도구.<br>파일은 서버로 전송되지 않습니다.</div>
+    <div class="sub">설치 없이 브라우저에서 바로 쓰는 업무 도구.</div>
   </header>
   <div class="body">
 
-    <a class="tool" href="/xlsx-unlock/">
-      <div class="name">엑셀 암호 해제 <span class="badge">running</span></div>
-      <div class="desc">열기 암호가 걸린 엑셀 파일에서 암호를 제거합니다. 암호를 아는 본인 파일 전용.</div>
-    </a>
+    <div class="tools">
 
-    <a class="tool" href="/xlsx-unprotect/">
-      <div class="name">엑셀 편집 잠금 해제 <span class="badge">running</span></div>
-      <div class="desc">비밀번호 없이 시트·통합문서 편집 보호를 풉니다. 편집이 잠긴 엑셀을 수정할 때.</div>
-    </a>
+      <a class="tool" href="/xlsx-unlock/">
+        <span class="badge">running</span>
+        <div class="name">엑셀 암호 해제</div>
+        <div class="desc">암호를 넣으면 파일의 열기 잠금을 지웁니다.</div>
+      </a>
 
-    <a class="tool" href="/hwpx-edit/">
-      <div class="name">HWPX 편집기 <span class="badge">running</span></div>
-      <div class="desc">한글 문서(.hwpx)의 {{치환자}}·본문·표 값을 채워 넣고 다시 저장합니다. 공문 서식 돌려쓸 때.</div>
-    </a>
+      <a class="tool" href="/xlsx-unprotect/">
+        <span class="badge">running</span>
+        <div class="name">엑셀 편집 잠금 해제</div>
+        <div class="desc">비밀번호 없이 시트·통합문서·수정 잠금을 풉니다.</div>
+      </a>
 
-    <div class="tool soon">
-      <div class="name">그린우편 검사기 <span class="badge gray">준비 중</span></div>
-      <div class="desc">우체국 e-그린우편 업로드 파일의 글자수·금지 문자를 발송 전에 점검합니다.</div>
+      <a class="tool" href="/hwpx-edit/">
+        <span class="badge">running</span>
+        <div class="name">HWPX 편집기</div>
+        <div class="desc">한글 문서의 <span class="kw">{{치환자}}</span>·본문·표를 채워 다시 저장합니다.</div>
+      </a>
+
+      <div class="tool soon">
+        <span class="badge gray">준비 중</span>
+        <div class="name">그린우편 검사기</div>
+        <div class="desc">e-그린우편 파일의 글자수·금지 문자를 미리 점검합니다.</div>
+      </div>
+
     </div>
 
     <div class="note">
-      모든 처리는 <b>브라우저 안에서만</b> 이루어집니다. 업로드도, 전송도 없습니다.<br>
-      망분리 환경에서도 사용할 수 있습니다.
+      모든 처리는 <b>브라우저 안에서만</b> 이루어집니다.
+      파일이 어디로도 전송되지 않아 망분리 환경에서도 쓸 수 있습니다.
     </div>
 
   </div>

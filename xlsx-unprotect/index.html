@@ -146,7 +146,7 @@
     <div class="msg" id="msg"></div>
 
     <div class="note">
-      <b>비밀번호 없이</b> 시트 보호·통합문서 보호를 해제합니다.
+      <b>비밀번호 없이</b> 시트 보호·통합문서 보호·수정 암호(읽기 전용 권장)를 해제합니다.
       편집 잠금은 실제 암호화가 아니라 잠금 표시일 뿐이라 암호가 필요 없습니다.<br><br>
       <b>열기 암호</b>(파일 열 때 비번을 묻는 것)는 이 도구로 풀 수 없습니다 →
       <a href="/xlsx-unlock/" style="color:var(--amber)">암호 해제 도구</a>를 쓰세요.<br><br>
@@ -214,7 +214,8 @@
       download(result.data, outName);
       showMsg('ok',
         '<b>완료.</b> 보호 태그 ' + result.removed + '개를 제거했습니다.<br>' +
-        '시트 보호 ' + result.sheets + '개, 통합문서 보호 ' + result.workbook + '개.<br>' +
+        '시트 보호 ' + result.sheets + '개, 통합문서 보호 ' + result.workbook + '개' +
+        (result.sharing ? ', 수정 암호 ' + result.sharing + '개' : '') + '.<br>' +
         '<b>' + outName + '</b> 로 저장했습니다.');
       goBtn.disabled = false;
     }catch(err){
@@ -233,7 +234,7 @@
     }
     const fflate = window.fflate;
     const unzipped = fflate.unzipSync(buf);
-    let removedSheets = 0, removedWorkbook = 0;
+    let removedSheets = 0, removedWorkbook = 0, removedSharing = 0;
     const dec = new TextDecoder('utf-8', {ignoreBOM:true});
     const enc = new TextEncoder();
 
@@ -259,18 +260,24 @@
         xml = xml.replace(/<workbookProtection\b[^>]*\/>/g, '')
                  .replace(/<workbookProtection\b[^>]*>[\s\S]*?<\/workbookProtection>/g, '');
         if(xml !== before){ changed = true; removedWorkbook++; }
+
+        // <fileSharing>: '읽기 전용 권장' 과 '수정 암호'. 역시 암호화가 아닌 잠금 표시다.
+        const beforeShare = xml;
+        xml = xml.replace(/<fileSharing\b[^>]*\/>/g, '')
+                 .replace(/<fileSharing\b[^>]*>[\s\S]*?<\/fileSharing>/g, '');
+        if(xml !== beforeShare){ changed = true; removedSharing++; }
       }
       if(changed){
         unzipped[path] = enc.encode(xml);
       }
     }
 
-    const removed = removedSheets + removedWorkbook;
+    const removed = removedSheets + removedWorkbook + removedSharing;
     let data = null;
     if(removed > 0){
       data = fflate.zipSync(unzipped, {level:6});
     }
-    return { data, removed, sheets: removedSheets, workbook: removedWorkbook };
+    return { data, removed, sheets: removedSheets, workbook: removedWorkbook, sharing: removedSharing };
   }
 
   function download(data, name){

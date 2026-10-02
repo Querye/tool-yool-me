@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>건의함 관리</title>
+<style>
+  :root{
+    --ink:#12130f;
+    --paper:#e8e4d8;
+    --line:#12130f;
+    --amber:#c8410b;
+    --amber-soft:#e8620f;
+    --ok:#2f6b3d;
+    --err:#a3231b;
+    --dim:#5c5a4e;
+    --field:#f4f1e7;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{
+    background:var(--paper);color:var(--ink);
+    font-family:"Consolas","DejaVu Sans Mono",monospace;
+    display:flex;align-items:flex-start;justify-content:center;
+    padding:24px;-webkit-font-smoothing:antialiased;
+  }
+  .frame{width:100%;max-width:760px;border:2px solid var(--line);background:var(--paper);box-shadow:6px 6px 0 var(--line)}
+  header{border-bottom:2px solid var(--line);padding:14px 18px;display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  header .tag{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+  h1{font-size:19px;font-weight:700}
+  .body{padding:18px}
+
+  .login{display:flex;gap:8px}
+  input[type=password]{
+    flex:1;border:2px solid var(--line);background:var(--field);color:var(--ink);
+    font-family:inherit;font-size:13px;padding:9px 10px;border-radius:0;
+  }
+  input:focus{outline:2px solid var(--amber);outline-offset:-2px}
+  button{
+    border:2px solid var(--line);background:var(--amber);color:#fff;font-family:inherit;
+    font-size:12px;font-weight:700;padding:9px 13px;cursor:pointer;box-shadow:2px 2px 0 var(--line);
+  }
+  button:hover:not(:disabled){background:var(--amber-soft)}
+  button:disabled{background:#b8b3a5;cursor:not-allowed}
+  button.ghost{background:transparent;color:var(--ink);box-shadow:none;border-width:1px;font-weight:400;padding:5px 9px;font-size:11px}
+  button.ghost:hover:not(:disabled){background:#ded9cb}
+  button.ghost.on{background:var(--ink);color:var(--paper)}
+
+  .bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:16px 0 12px}
+  .bar .sum{margin-left:auto;font-size:11px;color:var(--dim)}
+  .bar .sum b{color:var(--amber)}
+
+  .item{border:2px solid var(--line);background:#f0ece0;padding:12px 13px;margin-bottom:10px}
+  .item.done{opacity:.55;border-color:#9a9689}
+  .meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:10px;color:var(--dim);margin-bottom:8px}
+  .meta .kind{color:var(--ink);font-weight:700}
+  .text{font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+  .contact{font-size:11px;margin-top:8px;color:var(--dim);word-break:break-all}
+  .acts{display:flex;gap:6px;margin-top:10px}
+
+  .msg{margin-top:14px;padding:11px 13px;border:2px solid var(--line);font-size:12px;line-height:1.7;display:none}
+  .msg.show{display:block}
+  .msg.err{background:#efdcd9;border-color:var(--err);color:var(--err)}
+  .msg.info{background:#f0ece0;color:var(--dim)}
+  .empty{font-size:12px;color:var(--dim);padding:10px 0}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<div class="frame">
+  <header>
+    <h1>건의함 관리</h1>
+    <a class="tag" href="/feedback/" style="color:inherit;text-decoration:none">← 건의함</a>
+  </header>
+  <div class="body">
+
+    <form class="login" id="login">
+      <input type="password" id="token" placeholder="관리자 토큰" autocomplete="current-password">
+      <button type="submit">열기</button>
+    </form>
+
+    <div id="board" class="hide">
+      <div class="bar">
+        <button class="ghost on" data-f="new">미처리</button>
+        <button class="ghost" data-f="done">처리 완료</button>
+        <button class="ghost" data-f="all">전체</button>
+        <button class="ghost" id="reload">새로고침</button>
+        <span class="sum" id="sum"></span>
+      </div>
+      <div id="list"></div>
+    </div>
+
+    <div class="msg" id="msg"></div>
+
+  </div>
+</div>
+
+<script>
+"use strict";
+(function(){
+  const $ = id => document.getElementById(id);
+  const TOOL = { 'xlsx-unlock':'엑셀 암호 해제', 'xlsx-unprotect':'엑셀 편집 잠금 해제',
+                 'hwpx-edit':'HWPX 편집기', 'other':'그 밖의 도구' };
+  let token = '', items = [], filter = 'new';
+
+  try { token = sessionStorage.getItem('fbToken') || ''; } catch {}
+
+  function show(type, text){ $('msg').className = 'msg show ' + type; $('msg').textContent = text; }
+  function clear(){ $('msg').className = 'msg'; $('msg').textContent = ''; }
+
+  async function api(method, body){
+    const r = await fetch('/api/feedback', {
+      method,
+      headers: Object.assign({ authorization: 'Bearer ' + token },
+                             body ? { 'content-type': 'application/json' } : {}),
+      body: body ? JSON.stringify(body) : undefined
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.status === 401) throw new Error('auth');
+    if (r.status === 503) throw new Error('not_configured');
+    if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+    return d;
+  }
+
+  async function load(){
+    clear();
+    try{
+      items = (await api('GET')).items || [];
+      try { sessionStorage.setItem('fbToken', token); } catch {}
+      $('login').classList.add('hide');
+      $('board').classList.remove('hide');
+      render();
+    }catch(e){
+      try { sessionStorage.removeItem('fbToken'); } catch {}
+      $('login').classList.remove('hide');
+      $('board').classList.add('hide');
+      show('err', e.message === 'auth' ? '토큰이 맞지 않습니다.'
+        : e.message === 'not_configured' ? '서버 설정(D1 바인딩 DB, 비밀 변수 ADMIN_TOKEN)이 아직 없습니다.'
+        : '불러오지 못했습니다: ' + e.message);
+    }
+  }
+
+  // 이용자가 쓴 글은 전부 textContent 로만 넣는다 (HTML 로 해석되지 않게)
+  function el(tag, cls, text){
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function render(){
+    const fresh = items.filter(i => i.status === 'new').length;
+    $('sum').innerHTML = '';
+    $('sum').append('미처리 ', el('b', null, String(fresh)), ' · 전체 ' + items.length);
+
+    const list = $('list');
+    list.replaceChildren();
+    const shown = items.filter(i => filter === 'all' || i.status === filter);
+    if (!shown.length){ list.append(el('div', 'empty', '해당하는 건의가 없습니다.')); return; }
+
+    for (const it of shown){
+      const box = el('div', 'item' + (it.status === 'done' ? ' done' : ''));
+      const meta = el('div', 'meta');
+      meta.append(
+        el('span', null, '#' + it.id),
+        el('span', 'kind', it.kind),
+        el('span', null, TOOL[it.tool] || '도구 미지정'),
+        el('span', null, new Date(it.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }))
+      );
+      box.append(meta, el('div', 'text', it.body));
+      if (it.contact) box.append(el('div', 'contact', '연락처: ' + it.contact));
+
+      const acts = el('div', 'acts');
+      const toggle = el('button', 'ghost', it.status === 'done' ? '미처리로 되돌리기' : '처리 완료');
+      toggle.addEventListener('click', () => act(toggle, 'PATCH', { id: it.id, status: it.status === 'done' ? 'new' : 'done' }));
+      const del = el('button', 'ghost', '삭제');
+      del.addEventListener('click', () => { if (confirm('#' + it.id + ' 를 지울까요? 되돌릴 수 없습니다.')) act(del, 'DELETE', { id: it.id }); });
+      acts.append(toggle, del);
+      box.append(acts);
+      list.append(box);
+    }
+  }
+
+  async function act(btn, method, body){
+    btn.disabled = true;
+    try{ await api(method, body); await load(); }
+    catch(e){ show('err', '처리하지 못했습니다: ' + e.message); btn.disabled = false; }
+  }
+
+  $('login').addEventListener('submit', e => {
+    e.preventDefault();
+    token = $('token').value.trim();
+    if (token) load();
+  });
+  $('reload').addEventListener('click', load);
+  document.querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => {
+    filter = b.dataset.f;
+    document.querySelectorAll('[data-f]').forEach(x => x.classList.toggle('on', x === b));
+    render();
+  }));
+
+  if (token) load();
+})();
+</script>
+</body>
+</html>

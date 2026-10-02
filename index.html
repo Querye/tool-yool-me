@@ -98,6 +98,21 @@
     padding-top:12px;
   }
   .note b{color:var(--ink)}
+  .suggest{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    margin:14px 0;
+    padding:10px 13px;
+    border:2px dashed var(--line);
+    font-size:12px;
+    color:var(--ink);
+    text-decoration:none;
+    word-break:keep-all;
+  }
+  .suggest:hover{background:#fff;border-style:solid}
+  .suggest .sub{color:var(--dim)}
 </style>
 </head>
 <body>
@@ -135,6 +150,11 @@
       </div>
 
     </div>
+
+    <a class="suggest" href="/feedback/">
+      <span><b>건의하기</b> <span class="sub">— 필요한 도구, 고칠 점</span></span>
+      <span>→</span>
+    </a>
 
     <div class="note">
       모든 처리는 <b>브라우저 안에서만</b> 이루어집니다.

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>건의함</title>
+<meta name="description" content="tool.yool.me 에 필요한 도구, 고칠 점을 남겨 주세요.">
+<style>
+  :root{
+    --ink:#12130f;
+    --paper:#e8e4d8;
+    --line:#12130f;
+    --amber:#c8410b;
+    --amber-soft:#e8620f;
+    --ok:#2f6b3d;
+    --err:#a3231b;
+    --dim:#5c5a4e;
+    --field:#f4f1e7;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Consolas","DejaVu Sans Mono",monospace;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:24px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .frame{
+    width:100%;
+    max-width:560px;
+    border:2px solid var(--line);
+    background:var(--paper);
+    box-shadow:6px 6px 0 var(--line);
+  }
+  header{
+    border-bottom:2px solid var(--line);
+    padding:14px 18px;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+  }
+  header .tag{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+  h1{font-size:19px;font-weight:700;letter-spacing:-.01em}
+  .body{padding:18px}
+  .lead{font-size:12px;color:var(--dim);line-height:1.7;margin-bottom:18px;word-break:keep-all}
+
+  .field{margin-bottom:16px}
+  .label{display:block;font-size:12px;font-weight:700;margin-bottom:7px}
+  .label .opt{font-weight:400;color:var(--dim)}
+
+  .kinds{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .kinds input{position:absolute;opacity:0;pointer-events:none}
+  .kinds label{
+    display:block;text-align:center;font-size:12px;padding:9px 4px;cursor:pointer;
+    border:2px solid var(--line);background:var(--field);user-select:none;
+    transition:background .1s;
+  }
+  .kinds label:hover{background:#fff}
+  .kinds input:checked + label{background:var(--ink);color:var(--paper);font-weight:700}
+  .kinds input:focus-visible + label{outline:2px solid var(--amber);outline-offset:2px}
+
+  select,input[type=text],textarea{
+    width:100%;
+    border:2px solid var(--line);
+    background:var(--field);
+    color:var(--ink);
+    font-family:inherit;
+    font-size:13px;
+    padding:9px 10px;
+    line-height:1.55;
+    border-radius:0;
+  }
+  select:focus,input[type=text]:focus,textarea:focus{outline:2px solid var(--amber);outline-offset:-2px}
+  textarea{resize:vertical;min-height:150px}
+  .count{font-size:10px;color:var(--dim);text-align:right;margin-top:4px}
+  .count.over{color:var(--err);font-weight:700}
+
+  /* 사람에게는 보이지 않는 칸 — 봇만 채운다 */
+  .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+
+  button.go{
+    width:100%;
+    border:2px solid var(--line);
+    background:var(--amber);
+    color:#fff;
+    font-family:inherit;
+    font-size:14px;
+    font-weight:700;
+    letter-spacing:.04em;
+    padding:13px;
+    cursor:pointer;
+    box-shadow:3px 3px 0 var(--line);
+    transition:transform .06s, box-shadow .06s, background .12s;
+  }
+  button.go:hover:not(:disabled){background:var(--amber-soft)}
+  button.go:active:not(:disabled){transform:translate(3px,3px);box-shadow:0 0 0 var(--line)}
+  button.go:disabled{background:#b8b3a5;cursor:not-allowed;box-shadow:3px 3px 0 #8a8578}
+
+  .msg{
+    margin-top:16px;padding:12px 14px;border:2px solid var(--line);
+    font-size:12px;line-height:1.7;display:none;word-break:keep-all;
+  }
+  .msg.show{display:block}
+  .msg.ok{background:#dfe9df;border-color:var(--ok);color:var(--ok)}
+  .msg.err{background:#efdcd9;border-color:var(--err);color:var(--err)}
+  .msg.info{background:#f0ece0;color:var(--dim)}
+  .msg b{color:var(--ink)}
+
+  .note{
+    margin-top:18px;padding-top:14px;border-top:1px solid #c3bfb2;
+    font-size:10px;color:var(--dim);line-height:1.8;word-break:keep-all;
+  }
+  .note b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="frame">
+  <header>
+    <h1>건의함</h1>
+    <a class="tag" href="/" style="color:inherit;text-decoration:none">← tool.yool.me</a>
+  </header>
+  <div class="body">
+
+    <p class="lead">필요한 도구, 고칠 점, 불편했던 점을 적어 주세요.</p>
+
+    <form id="form" novalidate>
+      <div class="field">
+        <span class="label">종류</span>
+        <div class="kinds">
+          <input type="radio" name="kind" id="k1" value="오류"><label for="k1">오류</label>
+          <input type="radio" name="kind" id="k2" value="새 도구"><label for="k2">새 도구</label>
+          <input type="radio" name="kind" id="k3" value="개선"><label for="k3">개선</label>
+          <input type="radio" name="kind" id="k4" value="기타"><label for="k4">기타</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label" for="tool">관련 도구 <span class="opt">(선택)</span></label>
+        <select id="tool">
+          <option value="">선택 안 함</option>
+          <option value="xlsx-unlock">엑셀 암호 해제</option>
+          <option value="xlsx-unprotect">엑셀 편집 잠금 해제</option>
+          <option value="hwpx-edit">HWPX 편집기</option>
+          <option value="other">그 밖의 도구</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="label" for="body">내용</label>
+        <textarea id="body" maxlength="2000" placeholder="예: HWPX 편집기에서 표가 들어간 파일을 저장하면 한글에서 안 열립니다."></textarea>
+        <div class="count" id="count">0 / 2000</div>
+      </div>
+
+      <div class="field">
+        <label class="label" for="contact">답변 받을 연락처 <span class="opt">(선택)</span></label>
+        <input type="text" id="contact" maxlength="100" autocomplete="email" placeholder="이메일 등 — 비워 두면 답변하지 않습니다">
+      </div>
+
+      <div class="hp" aria-hidden="true">
+        <label for="website">웹사이트</label>
+        <input type="text" id="website" tabindex="-1" autocomplete="off">
+      </div>
+
+      <button class="go" id="send" type="submit">보내기</button>
+    </form>
+
+    <div class="msg" id="msg"></div>
+
+    <div class="note">
+      이 페이지에 적은 글만 운영자에게 전송됩니다. 도구에서 다룬 파일과는 관계없습니다.<br>
+      <b>업무 문서 내용이나 남의 개인정보는 적지 마세요.</b><br>
+      IP 주소는 저장하지 않습니다.
+    </div>
+
+  </div>
+</div>
+
+<script>
+"use strict";
+(function(){
+  const $ = id => document.getElementById(id);
+  const form = $('form'), body = $('body'), count = $('count'), send = $('send'), msg = $('msg');
+  const openedAt = Date.now();
+
+  function show(type, text){
+    msg.className = 'msg show ' + type;
+    msg.textContent = text;
+  }
+
+  // 도구 페이지의 '건의하기' 링크에서 왔으면 그 도구를 미리 골라 둔다
+  const pre = new URLSearchParams(location.search).get('tool');
+  if (pre && [...$('tool').options].some(o => o.value === pre)) $('tool').value = pre;
+
+  body.addEventListener('input', () => {
+    count.textContent = body.value.length + ' / 2000';
+    count.classList.toggle('over', body.value.length > 2000);
+  });
+
+  // 접수할 수 있는 상태인지 먼저 확인한다 (긴 글을 쓴 뒤 실패하지 않게)
+  fetch('/api/feedback', { headers: { accept: 'application/json' } })
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(d => {
+      if (!d.ready){
+        send.disabled = true;
+        show('info', '지금은 건의를 받을 준비가 되어 있지 않습니다. 잠시 뒤 다시 와 주세요.');
+      }
+    })
+    .catch(() => {
+      send.disabled = true;
+      show('info', '건의함 서버에 닿지 않습니다. 인터넷이 되는 환경에서 보내 주세요. (망분리 업무망에서는 보낼 수 없습니다)');
+    });
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const kind = (form.querySelector('input[name=kind]:checked') || {}).value;
+    const text = body.value.trim();
+    if (!kind){ show('err', '종류를 골라 주세요.'); return; }
+    if (text.length < 5){ show('err', '내용을 5자 이상 적어 주세요.'); body.focus(); return; }
+
+    send.disabled = true;
+    show('info', '보내는 중…');
+    try{
+      const r = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          kind, tool: $('tool').value, body: text,
+          contact: $('contact').value.trim(),
+          website: $('website').value,
+          elapsed: Date.now() - openedAt
+        })
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.ok){
+        form.reset();
+        count.textContent = '0 / 2000';
+        show('ok', '보냈습니다. 고맙습니다.');
+        send.disabled = false;
+        return;
+      }
+      const why = {
+        rate: '한 시간에 보낼 수 있는 수를 넘었습니다. 잠시 뒤 다시 보내 주세요.',
+        body: '내용은 5자 이상 2000자 이하로 적어 주세요.',
+        contact: '연락처는 100자 이하로 적어 주세요.',
+        not_configured: '지금은 건의를 받을 준비가 되어 있지 않습니다.'
+      }[d.error] || '보내지 못했습니다. 잠시 뒤 다시 시도해 주세요.';
+      show('err', why);   // 적은 내용은 지우지 않는다
+    }catch(err){
+      show('err', '서버에 닿지 않아 보내지 못했습니다. 적은 내용은 그대로 남아 있습니다.');
+    }
+    send.disabled = false;
+  });
+})();
+</script>
+</body>
+</html>

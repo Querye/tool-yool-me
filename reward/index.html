@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>신고포상금 찾기</title>
+<meta name="description" content="부패·공익·탈세·보조금·보험사기 등 정부 신고포상금 제도를 한눈에. 최고 한도, 신고처, 예상 보상금 계산.">
+<style>
+  :root{
+    --ink:#12130f;
+    --paper:#e8e4d8;
+    --card:#f0ece0;
+    --line:#12130f;
+    --amber:#c8410b;
+    --amber-soft:#e8620f;
+    --ok:#2f6b3d;
+    --err:#a3231b;
+    --dim:#5c5a4e;
+    --rule:#c3bfb2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Consolas","DejaVu Sans Mono",monospace;
+    display:flex;
+    justify-content:center;
+    padding:24px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .frame{
+    width:100%;
+    max-width:680px;
+    border:2px solid var(--line);
+    background:var(--paper);
+    box-shadow:6px 6px 0 var(--line);
+    align-self:flex-start;
+  }
+  header{
+    border-bottom:2px solid var(--line);
+    padding:14px 18px;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+  }
+  header .tag{
+    font-size:10px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--dim);
+    text-decoration:none;
+  }
+  h1{font-size:19px;font-weight:700;letter-spacing:-.01em}
+  .body{padding:18px}
+  .lead{font-size:12px;color:var(--dim);line-height:1.7;margin-bottom:14px;word-break:keep-all}
+
+  /* tabs */
+  .tabs{display:flex;border:2px solid var(--line);margin-bottom:14px}
+  .tabs button{
+    flex:1;
+    font:inherit;font-size:12px;font-weight:700;
+    padding:9px 6px;
+    background:var(--card);
+    border:0;border-right:2px solid var(--line);
+    cursor:pointer;color:var(--ink);
+  }
+  .tabs button:last-child{border-right:0}
+  .tabs button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
+
+  /* filters */
+  .search{
+    width:100%;
+    font:inherit;font-size:13px;
+    padding:9px 11px;
+    border:2px solid var(--line);
+    background:#fff;
+    margin-bottom:10px;
+  }
+  .search:focus{outline:none;box-shadow:3px 3px 0 var(--amber)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .chip{
+    font:inherit;font-size:11px;
+    padding:4px 9px;
+    border:1px solid var(--line);
+    background:var(--card);
+    cursor:pointer;color:var(--ink);
+  }
+  .chip[aria-pressed="true"]{background:var(--amber);border-color:var(--amber);color:#fff}
+
+  /* cards */
+  .list{display:flex;flex-direction:column;gap:12px}
+  .item{
+    border:2px solid var(--line);
+    background:var(--card);
+    box-shadow:3px 3px 0 var(--line);
+  }
+  .item summary{
+    list-style:none;
+    cursor:pointer;
+    padding:12px 13px;
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:4px 12px;
+    align-items:baseline;
+  }
+  .item summary::-webkit-details-marker{display:none}
+  .item[open] summary{border-bottom:1px solid var(--rule)}
+  .item .cat{
+    grid-column:1/-1;
+    font-size:9px;letter-spacing:.14em;
+    color:var(--amber);
+  }
+  .item .name{font-size:14px;font-weight:700;line-height:1.4;word-break:keep-all}
+  .item .max{
+    font-size:13px;font-weight:700;
+    color:var(--amber);
+    white-space:nowrap;
+    text-align:right;
+  }
+  .item .one{grid-column:1/-1;font-size:11px;color:var(--dim);line-height:1.6;word-break:keep-all}
+  .item .detail{padding:12px 13px;font-size:12px;line-height:1.75}
+  .item dl{display:grid;grid-template-columns:62px 1fr;gap:5px 10px}
+  .item dt{color:var(--dim);font-size:11px;padding-top:1px}
+  .item dd{word-break:keep-all;overflow-wrap:anywhere}
+  .item .warn{
+    margin-top:10px;
+    padding:7px 9px;
+    border-left:3px solid var(--err);
+    background:#efdcd9;
+    font-size:11px;color:var(--err);
+    line-height:1.6;word-break:keep-all;
+  }
+  .item .new{
+    margin-top:10px;
+    padding:7px 9px;
+    border-left:3px solid var(--ok);
+    background:#dfe9df;
+    font-size:11px;color:var(--ok);
+    line-height:1.6;word-break:keep-all;
+  }
+  .item a{color:var(--amber)}
+  .empty{font-size:12px;color:var(--dim);padding:20px;text-align:center;border:2px dashed var(--rule)}
+
+  /* calculator */
+  .calc{display:none}
+  .calc.on{display:block}
+  .list-wrap{display:none}
+  .list-wrap.on{display:block}
+  label.f{display:block;font-size:11px;color:var(--dim);margin:12px 0 5px}
+  select,input.num{
+    width:100%;
+    font:inherit;font-size:14px;
+    padding:9px 11px;
+    border:2px solid var(--line);
+    background:#fff;
+    color:var(--ink);
+  }
+  input.num{text-align:right}
+  select:focus,input.num:focus{outline:none;box-shadow:3px 3px 0 var(--amber)}
+  .unit{font-size:11px;color:var(--dim);margin-top:4px;text-align:right;min-height:16px}
+  .result{
+    margin-top:16px;
+    border:2px solid var(--line);
+    background:var(--ink);
+    color:var(--paper);
+    padding:14px;
+  }
+  .result .lbl{font-size:10px;letter-spacing:.14em;color:#b8b3a5}
+  .result .big{font-size:24px;font-weight:700;margin-top:4px;color:#ffb27a}
+  .result .how{font-size:11px;color:#cfcabb;margin-top:8px;line-height:1.7;word-break:keep-all}
+  .calc-note{font-size:11px;color:var(--dim);line-height:1.7;margin-top:12px;word-break:keep-all}
+
+  .note{
+    margin-top:18px;
+    font-size:10px;
+    color:var(--dim);
+    line-height:1.75;
+    border-top:1px solid var(--rule);
+    padding-top:12px;
+    word-break:keep-all;
+  }
+  .note b{color:var(--ink)}
+  .note a{color:var(--amber)}
+  .note ul{padding-left:14px;margin:6px 0}
+
+  @media (max-width:420px){
+    body{padding:12px}
+    .body{padding:14px}
+    .item dl{grid-template-columns:54px 1fr}
+    .item .max{font-size:12px}
+  }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header>
+    <h1>신고포상금 찾기</h1>
+    <a class="tag" href="/">← tool.yool.me</a>
+  </header>
+  <div class="body">
+    <p class="lead">정부 신고포상·보상금 제도를 한 곳에 모았습니다. 항목을 누르면 신고처와 지급 기준이 열립니다.</p>
+
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="list">제도 목록</button>
+      <button role="tab" aria-selected="false" data-tab="calc">예상액 계산</button>
+    </div>
+
+    <!-- LIST -->
+    <div class="list-wrap on" id="tab-list">
+      <input class="search" id="q" type="search" placeholder="검색: 보조금, 병원, 담합, 세금 …" autocomplete="off">
+      <div class="chips" id="chips"></div>
+      <div class="list" id="list"></div>
+    </div>
+
+    <!-- CALC -->
+    <div class="calc" id="tab-calc">
+      <label class="f" for="kind">제도</label>
+      <select id="kind">
+        <option value="acrc">권익위 보상금 (부패·공익·공공재정)</option>
+        <option value="tax">국세청 탈세제보 포상금</option>
+        <option value="ftc">공정위 신고포상금 (담합 등)</option>
+        <option value="emp">실업급여 부정수급 신고</option>
+      </select>
+
+      <label class="f" for="amt" id="amt-label">회복·환수된 금액 (원)</label>
+      <input class="num" id="amt" inputmode="numeric" placeholder="0">
+      <div class="unit" id="amt-kor"></div>
+
+      <div class="result">
+        <div class="lbl">예상 최대 지급액</div>
+        <div class="big" id="out">0원</div>
+        <div class="how" id="how">금액을 입력하세요.</div>
+      </div>
+      <p class="calc-note">
+        법령상 <b>상한</b>을 계산한 값입니다. 실제 지급액은 신고자 기여도, 증거 수준, 실제 징수액에 따라 감액됩니다.
+      </p>
+    </div>
+
+    <div class="note">
+      <b>주의</b>
+      <ul>
+        <li>기준일 <b>2026년 10월</b>. 개정이 잦은 분야라 신고 전 해당 기관 공지를 반드시 확인하세요.</li>
+        <li>감사·수사·조사 업무 종사자가 그 업무와 관련해 신고하면 보상금이 지급되지 않습니다.</li>
+        <li>업무 중 알게 된 정보(개인정보·전산 자료)를 개인 이득 목적으로 쓰면 개인정보보호법·행동강령 위반이 될 수 있습니다.</li>
+        <li>부패·공익신고는 <b>실명</b>이 원칙입니다. 익명 신고는 보호·보상이 어렵습니다.</li>
+        <li>허위 신고는 무고죄 등 처벌 대상입니다.</li>
+      </ul>
+      <b>tool.yool.me</b> · 이 페이지는 정보 제공용이며 법률 자문이 아닙니다 · <a href="/feedback/?tool=reward">수정 제보·건의</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA = [
+  {
+    cat:"공공·부패",
+    name:"부패행위 신고",
+    max:"보상 30억 / 포상 5억",
+    one:"공직자 뇌물·횡령·예산낭비, 공공기관 계약 비리",
+    where:"국민권익위원회(청렴포털), 감사원, 수사기관, 해당 기관 감사실",
+    call:"☎ 1398 (상담 110)",
+    rule:"보상금: 공공기관 수입 회복·증대·비용 절감액 기준 구간별 4~30%, 최고 30억원. 포상금: 공익 증진 등 기여 시 최고 5억원. 소속기관에 신고한 경우 그 기관의 추천·요청이 있어야 포상금 대상.",
+    who:"누구나 (실명)",
+    newnote:"권익위가 보상금을 회복액의 30% 일률 지급, 30억 상한 폐지로 시행령 개정 입법예고(2026.7). 시행 전.",
+    link:"https://www.clean.go.kr",
+    kw:"권익위 감사원 뇌물 횡령 청탁 채용비리 행동강령"
+  },
+  {
+    cat:"공공·부패",
+    name:"공공재정 부정청구 신고",
+    max:"보상 30억",
+    one:"보조금·지원금·출연금 허위·과다 청구, 목적 외 사용",
+    where:"국민권익위원회, 지급 기관(지자체·부처) 감사부서",
+    call:"☎ 1398",
+    rule:"공공재정환수법. 환수액 기준 구간별 보상금, 최고 30억원. 부정청구자는 부정이익 환수 + 최대 5배 제재부가금.",
+    who:"누구나 (실명)",
+    newnote:"30억 상한 폐지·30% 일률 지급 시행령 개정 입법예고(2026.7). 시행 전.",
+    link:"https://www.clean.go.kr",
+    kw:"보조금 지원금 부정수급 국고 지자체 출연금"
+  },
+  {
+    cat:"공공·부패",
+    name:"공익침해 신고",
+    max:"보상 구간식 / 포상 5억",
+    one:"건강·안전·환경·소비자이익·공정경쟁 침해 (대상법률 470여 개)",
+    where:"권익위, 소관 행정·감독기관, 수사기관, 해당 기업 등",
+    call:"☎ 1398",
+    rule:"공익신고자 보호법. 보상금: 내부 공익신고자가 신청, 회복액 1억 이하 30% → 구간별 체감(상한 규정 없음). 포상금: 최고 5억원. 구조금(치료비·이사비·소송비·임금손실) 별도.",
+    who:"보상금은 내부 신고자만",
+    link:"https://www.clean.go.kr",
+    kw:"공익 내부고발 환경 식품 안전 소비자 제보"
+  },
+  {
+    cat:"공공·부패",
+    name:"선거범죄 신고",
+    max:"최고 5억",
+    one:"금품 제공, 공무원 선거 개입, 허위사실 유포 등",
+    where:"중앙·지역 선거관리위원회",
+    call:"☎ 1390",
+    rule:"공직선거법 등. 선관위 심의로 지급, 최고 5억원. 선거 기간에 집중 운영.",
+    who:"누구나",
+    link:"https://www.nec.go.kr",
+    kw:"선관위 선거 금품 돈봉투 공무원"
+  },
+  {
+    cat:"세금·금융",
+    name:"탈세 제보",
+    max:"최고 40억",
+    one:"매출 누락, 차명계좌, 허위 세금계산서 등",
+    where:"국세청 (홈택스 탈세제보, 세무서)",
+    call:"☎ 126",
+    rule:"추징세액 5천만원 이상일 때 구간별 지급: 5천만~5억 20%, 5억~20억 15%, 20억~30억 10%, 30억 초과 5%. 최고 40억원. 은닉재산 신고는 최고 30억원.",
+    who:"누구나 (실명)",
+    newnote:"2026 세법개정안: 한도 폐지, 최소 추징세액 3천만원, 지급률 최대 30%로 상향 추진. 국회 통과 후 시행.",
+    link:"https://www.hometax.go.kr",
+    kw:"국세청 세금 탈세 차명 현금 매출누락 은닉재산 세파라치"
+  },
+  {
+    cat:"세금·금융",
+    name:"공정거래 위반 신고",
+    max:"상한 없음 (과징금 최대 10%)",
+    one:"담합, 부당지원, 사익편취, 하도급법 위반",
+    where:"공정거래위원회",
+    call:"공정위 홈페이지 신고센터",
+    rule:"2026.6.18 시행 개정 규정: 30억원 상한 폐지, 과징금의 최대 10%. 증거 수준·기여도로 차등. 위반 가담자 감액 상한 30%. 과징금 납부 후 지급.",
+    who:"누구나 (가담자도 일부 가능)",
+    link:"https://www.ftc.go.kr",
+    kw:"공정위 담합 입찰 하도급 갑질 부당지원 사익편취"
+  },
+  {
+    cat:"세금·금융",
+    name:"주가조작·회계부정 신고",
+    max:"상한 없음",
+    one:"시세조종, 미공개정보 이용, 분식회계",
+    where:"금융감독원, 금융위원회, 한국거래소 (경찰 이첩분도 인정)",
+    call:"☎ 1332",
+    rule:"2026.5.26 시행: 불공정거래 30억·회계부정 10억 상한 폐지. 부당이득·과징금의 일정 비율 기준, 기여도로 산정. 소액이어도 최저 지급액 설정.",
+    who:"누구나",
+    link:"https://www.fss.or.kr",
+    kw:"금감원 금융위 주가조작 작전 분식 회계 내부자거래"
+  },
+  {
+    cat:"복지·보험",
+    name:"요양급여 부당청구 신고",
+    max:"내부자 20억 / 일반 500만",
+    one:"병·의원·약국의 허위·부당 청구, 사무장병원",
+    where:"국민건강보험공단 (홈페이지 신고센터)",
+    call:"☎ 1577-1000",
+    rule:"내부 종사자(요양기관 관련자) 최고 20억원, 이용자·일반인 최고 500만원. 실제 징수액 비율로 지급.",
+    who:"내부 종사자 우대",
+    warn:"건보공단 직원이 업무상 열람한 자료로 신고하는 것은 금지됩니다.",
+    link:"https://www.nhis.or.kr",
+    kw:"건보 건강보험 병원 의원 약국 사무장병원 허위청구"
+  },
+  {
+    cat:"복지·보험",
+    name:"장기요양 부당청구 신고",
+    max:"내부자 2억 / 일반 500만",
+    one:"요양원·재가센터의 근무인력 허위 등록, 서비스 시간 부풀리기",
+    where:"국민건강보험공단",
+    call:"☎ 1577-1000",
+    rule:"장기요양기관 관련자 최고 2억원, 이용자·일반인 최고 500만원.",
+    who:"내부 종사자 우대",
+    warn:"건보공단 직원이 업무상 열람한 자료로 신고하는 것은 금지됩니다.",
+    link:"https://www.longtermcare.or.kr",
+    kw:"요양원 장기요양 재가 방문요양 주야간보호"
+  },
+  {
+    cat:"복지·보험",
+    name:"보험사기 제보",
+    max:"최대 5천만 (특별기간)",
+    one:"실손보험 허위 진료, 브로커, 자동차 사고 조작",
+    where:"금감원 보험사기신고센터, 각 보험사 신고센터",
+    call:"☎ 1332",
+    rule:"2026년 특별신고기간 기준 병·의원 관계자 5천만원, 브로커 3천만원, 이용자 1천만원. 보험협회 포상금 별도. 진료기록·녹취 등 물증 필요.",
+    who:"누구나 (업계 종사자 가산)",
+    link:"https://www.fss.or.kr",
+    kw:"보험 실손 사기 브로커 도수치료 렌터카 정비"
+  },
+  {
+    cat:"복지·보험",
+    name:"실업급여 등 부정수급 신고",
+    max:"연 500만 / 3천만",
+    one:"취업 사실 숨기고 실업급여 수령, 고용지원금 허위 신청",
+    where:"고용24, 관할 고용노동관서, 국민신문고",
+    call:"☎ 1350",
+    rule:"실업급여: 부정수급액의 20%, 1인 연 500만원 한도. 고용안정·직업능력개발 지원금: 30%, 연 3천만원 한도.",
+    who:"누구나",
+    link:"https://www.work24.go.kr",
+    kw:"고용보험 실업급여 고용지원금 부정수급 노동부"
+  }
+];
+
+const CATS = ["전체", ...new Set(DATA.map(d=>d.cat))];
+let cat = "전체";
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function chips(){
+  $("#chips").innerHTML = CATS.map(c=>
+    `<button class="chip" aria-pressed="${c===cat}" data-c="${esc(c)}">${esc(c)}</button>`).join("");
+}
+function render(){
+  const q = $("#q").value.trim().toLowerCase();
+  const rows = DATA.filter(d =>
+    (cat==="전체" || d.cat===cat) &&
+    (!q || [d.name,d.one,d.where,d.kw,d.rule].join(" ").toLowerCase().includes(q)));
+  $("#list").innerHTML = rows.length ? rows.map(d=>`
+    <details class="item">
+      <summary>
+        <span class="cat">${esc(d.cat)}</span>
+        <span class="name">${esc(d.name)}</span>
+        <span class="max">${esc(d.max)}</span>
+        <span class="one">${esc(d.one)}</span>
+      </summary>
+      <div class="detail">
+        <dl>
+          <dt>신고처</dt><dd>${esc(d.where)}</dd>
+          <dt>전화</dt><dd>${esc(d.call)}</dd>
+          <dt>기준</dt><dd>${esc(d.rule)}</dd>
+          <dt>대상</dt><dd>${esc(d.who)}</dd>
+          <dt>바로가기</dt><dd><a href="${esc(d.link)}" target="_blank" rel="noopener">${esc(d.link.replace(/^https?:\/\//,""))}</a></dd>
+        </dl>
+        ${d.newnote?`<div class="new">개정 동향 · ${esc(d.newnote)}</div>`:""}
+        ${d.warn?`<div class="warn">${esc(d.warn)}</div>`:""}
+      </div>
+    </details>`).join("") : `<div class="empty">검색 결과가 없습니다.</div>`;
+}
+$("#chips").addEventListener("click", e=>{
+  const b = e.target.closest(".chip"); if(!b) return;
+  cat = b.dataset.c; chips(); render();
+});
+$("#q").addEventListener("input", render);
+
+/* tabs */
+document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected", x===b));
+  $("#tab-list").classList.toggle("on", b.dataset.tab==="list");
+  $("#tab-calc").classList.toggle("on", b.dataset.tab==="calc");
+}));
+
+/* calculator */
+const 억 = 1e8, 만 = 1e4;
+function won(n){
+  n = Math.floor(n);
+  if(n<=0) return "0원";
+  const e = Math.floor(n/억), m = Math.floor((n%억)/만), r = n%만;
+  let s = "";
+  if(e) s += e.toLocaleString()+"억 ";
+  if(m) s += m.toLocaleString()+"만";
+  if(!e && !m) s = r.toLocaleString();
+  return s.trim()+"원";
+}
+// 구간식: [[상한, 기본액, 초과분 비율, 구간시작]]
+function tiers(x, table){
+  for(const [hi, base, rate, lo] of table){
+    if(x <= hi) return {v: base + (x-lo)*rate, base, rate, lo};
+  }
+}
+const CALC = {
+  acrc:{
+    label:"회복·증대된 공공기관 수입 (원)",
+    f(x){
+      const t = tiers(x,[
+        [1*억, 0, .30, 0],
+        [5*억, 0.3*억, .20, 1*억],
+        [20*억, 1.1*억, .14, 5*억],
+        [40*억, 3.2*억, .06, 20*억],
+        [Infinity, 4.4*억, .04, 40*억]
+      ]);
+      const cap = 30*억, v = Math.min(t.v, cap);
+      return {v, how:`${won(t.base)} + ${won(t.lo)} 초과분의 ${Math.round(t.rate*100)}%`
+        + (t.v>cap?` → 상한 30억 적용`:``)
+        + `<br>부패·공공재정 신고는 30억 상한, 공익신고는 상한 없음.`};
+    }
+  },
+  tax:{
+    label:"추징된 세액 (원)",
+    f(x){
+      if(x < 0.5*억) return {v:0, how:"추징세액 5천만원 미만은 지급 대상이 아닙니다."};
+      const t = tiers(x,[
+        [5*억, 0, .20, 0],
+        [20*억, 1*억, .15, 5*억],
+        [30*억, 3.25*억, .10, 20*억],
+        [Infinity, 4.25*억, .05, 30*억]
+      ]);
+      // 5천만~5억 구간은 전체액 20%
+      const v0 = x<=5*억 ? x*.20 : t.v;
+      const v = Math.min(v0, 40*억);
+      return {v, how: (x<=5*억? `추징세액의 20%` : `${won(t.base)} + ${won(t.lo)} 초과분의 ${Math.round(t.rate*100)}%`)
+        + (v0>40*억?` → 상한 40억 적용`:``)
+        + `<br>세법개정안 통과 시 지급률·한도가 상향됩니다.`};
+    }
+  },
+  ftc:{
+    label:"부과된 과징금 (원)",
+    f(x){ return {v:x*.10, how:"과징금의 최대 10% (2026.6.18 시행, 상한 없음). 증거 수준·기여도로 감액."}; }
+  },
+  emp:{
+    label:"확인된 부정수급액 (원)",
+    f(x){
+      const v = Math.min(x*.20, 500*만);
+      return {v, how:`부정수급액의 20%`+(x*.20>500*만?` → 1인 연 500만원 한도`:``)};
+    }
+  }
+};
+function calc(){
+  const k = $("#kind").value;
+  $("#amt-label").textContent = CALC[k].label;
+  const x = Number($("#amt").value.replace(/[^0-9]/g,"")) || 0;
+  $("#amt-kor").textContent = x ? won(x) : "";
+  if(!x){ $("#out").textContent="0원"; $("#how").textContent="금액을 입력하세요."; return; }
+  const r = CALC[k].f(x);
+  $("#out").textContent = won(r.v);
+  $("#how").innerHTML = r.how;
+}
+$("#amt").addEventListener("input", e=>{
+  const raw = e.target.value.replace(/[^0-9]/g,"");
+  e.target.value = raw ? Number(raw).toLocaleString() : "";
+  calc();
+});
+$("#kind").addEventListener("change", calc);
+
+chips(); render(); calc();
+</script>
+</body>
+</html>

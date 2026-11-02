@@ -25,8 +25,9 @@
 </head>
 <body>
 <h1>A 사이트</h1>
-<div class="sub">B 엣지(디버그 모드)를 이 페이지에서 제어하는 테스트</div>
+<div class="sub" id="mode">브라우저 모드 · B 엣지(디버그 모드)를 이 페이지에서 제어</div>
 
+<div id="cdpOnly">
 <fieldset>
   <legend>0. B 실행 (최초·재부팅 후)</legend>
   <button id="dlBat">B 실행기(.bat) 다운로드</button>
@@ -40,6 +41,7 @@
   <input id="ep" placeholder="ws://127.0.0.1:9222/devtools/browser/... (비우면 자동: 직접조회 → 클립보드 → 입력창)" spellcheck="false">
   <select id="tabs"><option>연결 전</option></select>
 </fieldset>
+</div>
 
 <fieldset>
   <legend>2. B에 fetch → 응답</legend>
@@ -64,7 +66,7 @@ const WS_RE = /^ws:\/\/(127\.0\.0\.1|localhost):\d+\/devtools\/browser\/[\w-]+$/
 
 $('cmd').textContent = `msedge ${ARGS}`;
 
-let ws = null, sid = null, seq = 0;
+let ws = null, sid = null, seq = 0, bridge = false;
 const pend = new Map();
 const log = v => $('out').textContent = typeof v === 'string' ? v : JSON.stringify(v, null, 2);
 const ready = on => { $('doFetch').disabled = !on; $('x4').disabled = !on; };
@@ -97,6 +99,11 @@ function send(method, params = {}, sessionId) {
 }
 
 async function ev(expression) {
+  if (bridge) {
+    const b = await window.pywebview.api.run(expression);
+    if (!b.ok) throw Error(b.error);
+    return b.value;
+  }
   const r = await send('Runtime.evaluate', {expression, awaitPromise: true, returnByValue: true}, sid);
   if (r.exceptionDetails) throw Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text);
   return r.result.value;
@@ -179,6 +186,18 @@ $('x4').onclick = async () => {
     log(v);
   } catch (e) { log('실패: ' + e.message); }
 };
+
+/* ---------- exe(WebView) 모드: 브리지 자동 사용 ---------- */
+function enableBridge() {
+  if (bridge || !window.pywebview?.api?.run) return;
+  bridge = true;
+  $('cdpOnly').hidden = true;
+  $('mode').textContent = 'exe 모드 · B 자동 연결';
+  ready(true);
+  window.pywebview.api.url().then(u => log('연결됨 (exe): ' + u));
+}
+window.addEventListener('pywebviewready', enableBridge);
+enableBridge();
 </script>
 </body>
 </html>

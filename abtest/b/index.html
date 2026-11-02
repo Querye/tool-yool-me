@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>B 사이트</title>
+<style>
+  body{background:#e8e4d8;color:#12130f;font-family:"Consolas","DejaVu Sans Mono",monospace;max-width:480px;margin:40px auto;padding:0 16px}
+  h1{font-size:20px;margin-bottom:16px}
+  input,button{font:inherit;padding:8px 10px;border:2px solid #12130f;background:#fff}
+  input{width:100%;box-sizing:border-box;margin-bottom:8px}
+  button{background:#12130f;color:#e8e4d8;cursor:pointer}
+  #result{margin-top:16px;padding:12px;border:2px solid #12130f;min-height:20px;background:#fff}
+</style>
+</head>
+<body>
+<h1>B 사이트</h1>
+<input id="query" type="number" placeholder="숫자 입력">
+<button id="btn">클릭</button>
+<div id="result"></div>
+<script>
+document.getElementById('btn').addEventListener('click', async () => {
+  const n = document.getElementById('query').value;
+  const out = document.getElementById('result');
+  try {
+    const r = await fetch('/api/abtest/double', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({n})
+    });
+    const d = await r.json();
+    out.textContent = r.ok ? d.result : '오류: ' + d.error;
+  } catch (e) {
+    out.textContent = '오류: ' + e.message;
+  }
+});
+</script>
+</body>
+</html>

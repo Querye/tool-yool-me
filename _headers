@@ -5,3 +5,6 @@
 /feedback/admin/*
   X-Robots-Tag: noindex, nofollow
   Cache-Control: no-store
+
+/abtest/*
+  X-Robots-Tag: noindex, nofollow

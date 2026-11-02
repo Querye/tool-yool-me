@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>A 사이트 · abtest</title>
+<style>
+  :root{--ink:#12130f;--paper:#e8e4d8;--amber:#c8410b;--dim:#5c5a4e}
+  *{box-sizing:border-box}
+  body{background:var(--paper);color:var(--ink);font-family:"Consolas","DejaVu Sans Mono",monospace;max-width:640px;margin:32px auto;padding:0 16px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--dim);font-size:12px;margin-bottom:16px}
+  fieldset{border:2px solid var(--ink);margin:12px 0;padding:12px;background:#f3f0e6}
+  legend{font-weight:700;padding:0 6px}
+  input,select,button{font:inherit;padding:7px 9px;margin:4px 0;border:2px solid var(--ink);background:#fff;color:var(--ink)}
+  input,select{width:100%}
+  button{background:var(--ink);color:var(--paper);cursor:pointer}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.alt{background:#fff;color:var(--ink)}
+  pre{background:#fff;border:2px solid var(--ink);padding:10px;white-space:pre-wrap;word-break:break-all;min-height:60px;margin:12px 0}
+  code{display:block;background:#fff;border:1px dashed var(--dim);padding:8px;font-size:11px;word-break:break-all;margin:6px 0}
+  .hint{color:var(--dim);font-size:12px;line-height:1.6}
+</style>
+</head>
+<body>
+<h1>A 사이트</h1>
+<div class="sub">B 엣지(디버그 모드)를 이 페이지에서 제어하는 테스트</div>
+
+<fieldset>
+  <legend>0. B 실행 (최초·재부팅 후)</legend>
+  <button id="dlBat">B 실행기(.bat) 다운로드</button>
+  <div class="hint">받은 파일을 실행하면 B 엣지가 열리고 WS 주소가 클립보드에 복사됩니다.<br>또는 Win+R에 아래 명령 붙여넣기:</div>
+  <code id="cmd"></code>
+</fieldset>
+
+<fieldset>
+  <legend>1. 연결</legend>
+  <button id="connect">B 연결</button>
+  <input id="ep" placeholder="ws://127.0.0.1:9222/devtools/browser/... (비우면 자동: 직접조회 → 클립보드 → 입력창)" spellcheck="false">
+  <select id="tabs"><option>연결 전</option></select>
+</fieldset>
+
+<fieldset>
+  <legend>2. B에 fetch → 응답</legend>
+  <input id="n" type="number" value="5">
+  <button id="doFetch" disabled>B로 fetch 보내기</button>
+</fieldset>
+
+<fieldset>
+  <legend>3. B 화면 조작</legend>
+  <button id="x4" disabled>B 쿼리값 ×4 → 쿼리에 입력 → 클릭</button>
+</fieldset>
+
+<pre id="out">대기</pre>
+
+<script>
+const $ = id => document.getElementById(id);
+const ORIGIN = location.origin;
+const B_URL = ORIGIN + '/abtest/b/';
+const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+const ARGS = `--remote-debugging-port=9222 --user-data-dir="%LOCALAPPDATA%\\EdgeDebug" --remote-allow-origins=${ORIGIN} --no-first-run ${B_URL}`;
+const WS_RE = /^ws:\/\/(127\.0\.0\.1|localhost):\d+\/devtools\/browser\/[\w-]+$/;
+
+$('cmd').textContent = `msedge ${ARGS}`;
+
+let ws = null, sid = null, seq = 0;
+const pend = new Map();
+const log = v => $('out').textContent = typeof v === 'string' ? v : JSON.stringify(v, null, 2);
+const ready = on => { $('doFetch').disabled = !on; $('x4').disabled = !on; };
+
+/* ---------- B 실행기 (.bat) ---------- */
+$('dlBat').onclick = () => {
+  const bat = [
+    '@echo off',
+    `start "" "${EDGE}" ${ARGS}`,
+    'powershell -NoProfile -Command "$u=$null; for($i=0;$i -lt 40 -and -not $u;$i++){ try{ $u=(Invoke-RestMethod http://127.0.0.1:9222/json/version).webSocketDebuggerUrl }catch{ Start-Sleep -Milliseconds 250 } }; if($u){ Set-Clipboard $u; Write-Host OK: $u } else { Write-Host FAIL: debug port not open }"',
+    'timeout /t 3 >nul',
+    ''
+  ].join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([bat], {type: 'application/octet-stream'}));
+  a.download = 'open_b.bat';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+
+/* ---------- CDP ---------- */
+function send(method, params = {}, sessionId) {
+  return new Promise((ok, no) => {
+    if (!ws || ws.readyState !== 1) return no(Error('연결 없음'));
+    const i = ++seq;
+    pend.set(i, {ok, no});
+    ws.send(JSON.stringify({id: i, method, params, sessionId}));
+    setTimeout(() => { if (pend.delete(i)) no(Error('시간 초과: ' + method)); }, 15000);
+  });
+}
+
+async function ev(expression) {
+  const r = await send('Runtime.evaluate', {expression, awaitPromise: true, returnByValue: true}, sid);
+  if (r.exceptionDetails) throw Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text);
+  return r.result.value;
+}
+
+async function findWs() {
+  const typed = $('ep').value.trim();
+  if (typed) return {url: typed, via: '입력값'};
+  try {
+    const r = await fetch('http://127.0.0.1:9222/json/version');
+    return {url: (await r.json()).webSocketDebuggerUrl, via: '직접조회(CORS 통과)'};
+  } catch {}
+  try {
+    const c = (await navigator.clipboard.readText()).trim();
+    if (WS_RE.test(c)) return {url: c, via: '클립보드'};
+  } catch {}
+  const m = prompt('WS 주소를 붙여넣으세요.\n(B 실행기 실행 후 클립보드에 있음, 또는 http://127.0.0.1:9222/json/version 의 webSocketDebuggerUrl)');
+  if (!m) throw Error('취소');
+  return {url: m.trim(), via: '수동 입력'};
+}
+
+async function attach(targetId) {
+  ready(false);
+  const r = await send('Target.attachToTarget', {targetId, flatten: true});
+  sid = r.sessionId;
+  ready(true);
+}
+
+$('connect').onclick = async () => {
+  try {
+    const {url, via} = await findWs();
+    if (!WS_RE.test(url)) throw Error('WS 주소 형식 아님: ' + url);
+    $('ep').value = url;
+    if (ws) ws.close();
+    ws = new WebSocket(url);
+    ws.onmessage = e => {
+      const m = JSON.parse(e.data);
+      const p = pend.get(m.id);
+      if (p) { pend.delete(m.id); m.error ? p.no(Error(m.error.message)) : p.ok(m.result); }
+    };
+    ws.onclose = () => { ready(false); sid = null; };
+    await new Promise((ok, no) => {
+      ws.onopen = ok;
+      ws.onerror = () => no(Error('WS 연결 실패. 확인: ① B가 실행 중인지 ② B 실행 명령의 --remote-allow-origins=' + ORIGIN + ' ③ 로컬 네트워크 접근 허용 ④ 주소가 최신인지(B 재시작 시 바뀜)'));
+    });
+    const {targetInfos} = await send('Target.getTargets');
+    const pages = targetInfos.filter(t => t.type === 'page');
+    if (!pages.length) throw Error('B에 열린 탭 없음');
+    $('tabs').innerHTML = '';
+    pages.forEach(t => $('tabs').add(new Option(`${t.title} — ${t.url}`, t.targetId)));
+    const b = pages.find(t => t.url.startsWith(B_URL)) || pages[0];
+    $('tabs').value = b.targetId;
+    await attach(b.targetId);
+    log(`연결됨 (${via}): ${b.title} — ${b.url}`);
+  } catch (e) { log('실패: ' + e.message); }
+};
+
+$('tabs').onchange = () => attach($('tabs').value).then(() => log('탭 변경됨')).catch(e => log('실패: ' + e.message));
+
+/* ---------- 작업 ---------- */
+$('doFetch').onclick = async () => {
+  try {
+    const n = Number($('n').value);
+    const v = await ev(`fetch('/api/abtest/double',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({n:${JSON.stringify(n)}})}).then(async r=>({status:r.status,body:await r.json()}))`);
+    log({보낸값: n, 응답: v});
+  } catch (e) { log('실패: ' + e.message); }
+};
+
+$('x4').onclick = async () => {
+  try {
+    const v = await ev(`(async()=>{
+      const q=document.querySelector('#query'), r=document.querySelector('#result'), b=document.querySelector('#btn');
+      if(!q||!r||!b) throw Error('B 사이트 요소 없음 (선택한 탭이 B 사이트인지 확인)');
+      const before=r.textContent, old=q.value, val=Number(q.value)*4;
+      q.value=val; q.dispatchEvent(new Event('input',{bubbles:true}));
+      b.click();
+      for(let i=0;i<50&&r.textContent===before;i++) await new Promise(s=>setTimeout(s,100));
+      return {기존값:old, 입력값:val, B결과:r.textContent};
+    })()`);
+    log(v);
+  } catch (e) { log('실패: ' + e.message); }
+};
+</script>
+</body>
+</html>
